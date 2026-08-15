@@ -19,6 +19,8 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 import { CrealityError } from '../errors.js';
+import type { ModelService } from '../model/service.js';
+import { EXPORT_FORMATS, PREVIEW_VIEWS } from '../model/types.js';
 import type { CrealityService, MutationOptions } from '../service.js';
 
 export const SERVER_NAME = 'creality-agent-tool';
@@ -39,7 +41,15 @@ argument invalidates the token. Never fabricate a token, and never present a
 dry-run result as though the action happened.
 
 Arbitrary G-code execution, emergency stop, firmware updates, config edits and
-file deletion are not exposed; printer_capabilities lists them with reasons.`;
+file deletion are not exposed; printer_capabilities lists them with reasons.
+
+This server also hosts a local CAD workspace (model_* tools). Those tools write
+only to a local project directory and run OpenSCAD; they never touch the
+printer, so they need no confirmation token. You are the model generator: read
+the user's request, write OpenSCAD source yourself, and pass it as \`source\`.
+The server does not call any language model. Work iteratively — create or
+update the source, render a preview, look at what OpenSCAD reported, and refine
+the source before exporting a mesh.`;
 
 const mutationShape = {
   dry_run: z
@@ -92,8 +102,11 @@ async function guard(run: () => unknown): Promise<CallToolResult> {
   }
 }
 
-/** Build an MCP server exposing `service`. The caller owns the transport. */
-export function createMcpServer(service: CrealityService): McpServer {
+/**
+ * Build an MCP server exposing `service`, and — when supplied — the local CAD
+ * workspace. The caller owns the transport.
+ */
+export function createMcpServer(service: CrealityService, models?: ModelService): McpServer {
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
     { instructions: INSTRUCTIONS },
@@ -336,5 +349,163 @@ export function createMcpServer(service: CrealityService): McpServer {
       await guard(() => service.cancelPrint(mutationOptions({ dry_run, confirmation_token }))),
   );
 
+  if (models !== undefined) registerModelTools(server, models);
+
   return server;
+}
+
+/**
+ * CAD workspace tools.
+ *
+ * These are local-only: they read and write a sandboxed project directory and
+ * shell out to OpenSCAD with a fixed argument vector. Nothing here can reach
+ * the printer, which is why none of it takes a confirmation token.
+ */
+function registerModelTools(server: McpServer, models: ModelService): void {
+  const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
+  const writes = {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  } as const;
+
+  const projectId = z
+    .string()
+    .describe('Project id, e.g. "cable-clip". Lowercase letters, digits, "-" and "_".');
+
+  server.registerTool(
+    'model_toolchain_status',
+    {
+      title: 'CAD toolchain status',
+      description:
+        'Whether OpenSCAD is installed and runnable, its version and path. When unavailable, the reason explains how to install it or which environment variable points at it. Call this before promising a preview.',
+      inputSchema: {},
+      annotations: { ...readOnly, title: 'CAD toolchain status' },
+    },
+    async () =>
+      await guard(async () => ({
+        ...(await models.toolchain()),
+        workspaceDir: models.config.workspaceDir,
+      })),
+  );
+
+  server.registerTool(
+    'model_project_list',
+    {
+      title: 'List model projects',
+      description:
+        'All model projects in the local workspace, newest first, with their prompt, revision, and built artifacts.',
+      inputSchema: {},
+      annotations: { ...readOnly, title: 'List model projects' },
+    },
+    async () => await guard(async () => ({ projects: await models.list() })),
+  );
+
+  server.registerTool(
+    'model_project_read',
+    {
+      title: 'Read a model project',
+      description:
+        'The full OpenSCAD source of one project, plus its metadata, revision history, and current artifacts. Read before updating so an edit is based on what is actually on disk.',
+      inputSchema: { project_id: projectId },
+      annotations: { ...readOnly, title: 'Read a model project' },
+    },
+    async ({ project_id }) => await guard(() => models.read(project_id)),
+  );
+
+  server.registerTool(
+    'model_project_create',
+    {
+      title: 'Create a model project',
+      description:
+        'Create a project from OpenSCAD source you have written. The prompt is stored verbatim as the durable record of what was asked for; write dimensioned, parametric source (named variables at the top) so later revisions are cheap. Nothing is sent to any cloud service.',
+      inputSchema: {
+        name: z.string().describe('Human-readable name, e.g. "Cable clip 6mm".'),
+        prompt: z.string().describe("The user's request, verbatim."),
+        source: z.string().describe('Complete OpenSCAD source. Units are millimetres.'),
+        project_id: z
+          .string()
+          .optional()
+          .describe('Explicit id. Defaults to a slug of the name, de-duplicated.'),
+      },
+      annotations: { ...writes, title: 'Create a model project' },
+    },
+    async ({ name, prompt, source, project_id }) =>
+      await guard(() =>
+        models.create({
+          name,
+          prompt,
+          source,
+          ...(project_id === undefined ? {} : { id: project_id }),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    'model_project_update',
+    {
+      title: 'Update a model project',
+      description:
+        'Replace the OpenSCAD source with a new revision. The whole source is replaced, so send the complete file. The project keeps its original prompt; pass `prompt` to record the instruction behind this specific edit. Existing previews and exports are discarded because they no longer match the source.',
+      inputSchema: {
+        project_id: projectId,
+        source: z.string().describe('Complete replacement OpenSCAD source.'),
+        prompt: z.string().optional().describe('The instruction behind this revision.'),
+        note: z.string().optional().describe('Short changelog note, e.g. "widened the slot".'),
+      },
+      annotations: { ...writes, idempotentHint: false, title: 'Update a model project' },
+    },
+    async ({ project_id, source, prompt, note }) =>
+      await guard(() =>
+        models.update({
+          id: project_id,
+          source,
+          ...(prompt === undefined ? {} : { prompt }),
+          ...(note === undefined ? {} : { note }),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    'model_render_preview',
+    {
+      title: 'Render preview images',
+      description: `Render PNG previews of the current source (${PREVIEW_VIEWS.join(', ')} by default). Returns one artifact per view plus any OpenSCAD warnings. Fails with TOOL_UNAVAILABLE if OpenSCAD is not installed, and RENDER_FAILED with the compiler diagnostics if the source does not compile — read those and fix the source.`,
+      inputSchema: {
+        project_id: projectId,
+        views: z
+          .array(z.enum(PREVIEW_VIEWS))
+          .optional()
+          .describe(`Subset of ${PREVIEW_VIEWS.join(', ')}. Defaults to all four.`),
+        width: z.number().int().optional().describe('Image width in pixels, 160–2048.'),
+        height: z.number().int().optional().describe('Image height in pixels, 160–2048.'),
+      },
+      annotations: { ...writes, title: 'Render preview images' },
+    },
+    async ({ project_id, views, width, height }) =>
+      await guard(() =>
+        models.renderPreview({
+          id: project_id,
+          ...(views === undefined ? {} : { views }),
+          ...(width === undefined ? {} : { width }),
+          ...(height === undefined ? {} : { height }),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    'model_export',
+    {
+      title: 'Export a mesh',
+      description: `Export the current source as ${EXPORT_FORMATS.join(' or ')} into the project's build directory. Returns the artifact path and size. 3MF requires an OpenSCAD build with lib3mf; if it is missing, the error says so.`,
+      inputSchema: {
+        project_id: projectId,
+        format: z.enum(EXPORT_FORMATS).describe('Mesh format to write.'),
+      },
+      annotations: { ...writes, title: 'Export a mesh' },
+    },
+    async ({ project_id, format }) =>
+      await guard(() => models.export({ id: project_id, format })),
+  );
 }

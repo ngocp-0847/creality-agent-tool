@@ -40,6 +40,78 @@ export type {
   PreflightSeverity,
 } from './gcode/preflight.js';
 
+export {
+  MODEL_DEFAULTS,
+  MODEL_ENV_KEYS,
+  defineModelConfig,
+  loadModelConfigFromEnv,
+} from './model/config.js';
+export type { ModelConfig, ModelConfigInput } from './model/config.js';
+
+export {
+  CliOpenScadRunner,
+  Semaphore,
+  childEnvironment,
+  defaultCandidates,
+  execute,
+  openscadUnavailable,
+} from './model/openscad.js';
+export type {
+  OpenScadRunOptions,
+  OpenScadRunResult,
+  OpenScadRunner,
+  OpenScadStatus,
+} from './model/openscad.js';
+
+export {
+  ARTIFACT_NAME_PATTERN,
+  BUILD_DIR,
+  METADATA_FILE,
+  PROJECT_ID_PATTERN,
+  SOURCE_FILE,
+  artifactPath,
+  assertContained,
+  contentTypeFor,
+  exportArtifactName,
+  normalizeProjectId,
+  previewArtifactName,
+  projectPaths,
+  resolveWorkspace,
+  slugifyProjectId,
+} from './model/paths.js';
+export type { ProjectPaths } from './model/paths.js';
+
+export { ModelService } from './model/service.js';
+export type {
+  ExportModelInput,
+  ModelServiceDeps,
+  ProjectDetail,
+  ProjectSummary,
+  RenderPreviewInput,
+} from './model/service.js';
+
+export { validateScadSource } from './model/source.js';
+export { ModelProjectStore, writeFileAtomic } from './model/store.js';
+export type {
+  CreateProjectInput,
+  ModelProjectStoreOptions,
+  UpdateProjectInput,
+} from './model/store.js';
+
+export { EXPORT_FORMATS, PREVIEW_VIEWS } from './model/types.js';
+export type {
+  ArtifactKind,
+  ArtifactRef,
+  ExportFormat,
+  ExportResult,
+  ModelProject,
+  ModelProjectMetadata,
+  ModelRevision,
+  PreviewView,
+  RenderResult,
+  RenderedView,
+} from './model/types.js';
+
 export { MoonrakerClient } from './moonraker/client.js';
 export type { UploadRequest } from './moonraker/client.js';
 export { mapFileEntry, mapJob, mapMetadata, mapStatus } from './moonraker/mappers.js';
@@ -65,6 +137,13 @@ export type {
   StartPrintInput,
   UploadGcodeInput,
 } from './service.js';
+
+export { createModelWebHandler, startModelWebServer } from './web/server.js';
+export type {
+  ModelWebServerOptions,
+  RequestHandler,
+  RunningModelWebServer,
+} from './web/server.js';
 
 export { MUTATING_ACTIONS, isMutatingAction } from './types.js';
 export type {

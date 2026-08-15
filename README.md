@@ -18,6 +18,8 @@ The project exposes a clean TypeScript service API and a thin MCP stdio server. 
 - SHA-256 audit records with credential and payload redaction
 - No raw-G-code escape hatch
 - Typed errors, bounded responses, request/upload timeouts
+- Prompt-to-OpenSCAD project workflow for agents
+- Local web editor with multi-view preview and STL/3MF export
 
 ## Architecture
 
@@ -107,6 +109,31 @@ Tools:
 
 - Read-only: `printer_status`, `printer_job`, `printer_capabilities`, `gcode_list`, `gcode_metadata`, `gcode_preflight`, `audit_tail`
 - Mutating: `gcode_upload`, `print_start`, `print_pause`, `print_resume`, `print_cancel`
+- CAD: `model_toolchain_status`, `model_project_list`, `model_project_read`, `model_project_create`, `model_project_update`, `model_render_preview`, `model_export`
+
+## Prompt, edit, preview, and export a model
+
+The agent turns the user's natural-language request into parametric OpenSCAD source and calls `model_project_create`. The original prompt, source revisions, previews, and exports remain in the local model workspace. This package does not send prompts or model files to a cloud service.
+
+Install [OpenSCAD](https://openscad.org/downloads.html), then point the tool at its CLI when automatic detection is not enough:
+
+```powershell
+$env:CREALITY_OPENSCAD_PATH = "C:\Program Files\OpenSCAD\openscad.com"
+npm run build
+npm run model:web
+```
+
+Open <http://127.0.0.1:7420>. Select the project created by the agent, edit the complete `.scad` source, save a new revision, render front/top/isometric previews, then export STL or 3MF. The editor is intentionally bound to loopback and contains no print/start/heater controls.
+
+Recommended workflow:
+
+1. Ask the agent for a dimensioned object, including tolerances, wall thickness, and intended material.
+2. The agent creates parametric OpenSCAD and renders previews.
+3. Inspect and make the final source edit in the local web editor.
+4. Export STL or 3MF, then slice it with a Creality Hi profile in Creality Print or another compatible slicer.
+5. Preflight the resulting G-code before upload or print.
+
+OpenSCAD is required for preview and mesh export. If it is absent, project creation and manual source editing still work, and `model_toolchain_status` reports the exact setup problem. Exported STL/3MF is geometry, not printer-ready G-code; slicing remains a separate, deliberate step. CFS material/slot mapping is still outside this MVP.
 
 ## Confirmation flow
 

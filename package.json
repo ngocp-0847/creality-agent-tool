@@ -18,10 +18,15 @@
     "./mcp": {
       "types": "./dist/mcp/server.d.ts",
       "import": "./dist/mcp/server.js"
+    },
+    "./model": {
+      "types": "./dist/model/service.d.ts",
+      "import": "./dist/model/service.js"
     }
   },
   "bin": {
-    "creality-mcp": "./dist/mcp/bin.js"
+    "creality-mcp": "./dist/mcp/bin.js",
+    "creality-model-web": "./dist/web/bin.js"
   },
   "files": [
     "dist",
@@ -37,7 +42,9 @@
     "lint:fix": "eslint . --fix",
     "test": "npm run build:test && node --test .build-test/test/*.test.js",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "mcp": "node dist/mcp/bin.js"
+    "mcp": "node dist/mcp/bin.js",
+    "model:web": "node dist/web/bin.js",
+    "model:web:dev": "npm run build && node dist/web/bin.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.0",

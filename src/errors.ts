@@ -33,6 +33,10 @@ export const ERROR_CODES = [
   'PAYLOAD_TOO_LARGE',
   /** Action is not supported by this printer model / profile. */
   'UNSUPPORTED',
+  /** A required external tool (OpenSCAD) is not installed or not runnable. */
+  'TOOL_UNAVAILABLE',
+  /** OpenSCAD ran but refused the model: syntax error, empty geometry, timeout. */
+  'RENDER_FAILED',
   /** Moonraker returned a response we could not interpret. */
   'PROTOCOL',
   /** Unexpected internal failure. */

@@ -13,6 +13,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 
 import { loadConfigFromEnv } from '../config.js';
 import { CrealityError } from '../errors.js';
+import { loadModelConfigFromEnv } from '../model/config.js';
+import { ModelService } from '../model/service.js';
 import { CrealityService } from '../service.js';
 import { createMcpServer, SERVER_NAME, SERVER_VERSION } from './server.js';
 
@@ -22,13 +24,17 @@ function note(message: string): void {
 
 export async function main(): Promise<void> {
   let service: CrealityService;
+  let models: ModelService;
   try {
     const config = loadConfigFromEnv();
     service = new CrealityService(config);
+    const modelConfig = loadModelConfigFromEnv();
+    models = new ModelService(modelConfig);
     note(
       `v${SERVER_VERSION} ready — model=${config.model} target=${config.baseUrl} ` +
         `dryRunDefault=${String(config.dryRunDefault)} confirmationTtl=${config.confirmationTtlMs}ms`,
     );
+    note(`cad workspace=${modelConfig.workspaceDir}`);
   } catch (error) {
     const wrapped = CrealityError.wrap(error, 'CONFIG_INVALID');
     note(`startup failed (${wrapped.code}): ${wrapped.message}`);
@@ -36,7 +42,7 @@ export async function main(): Promise<void> {
     return;
   }
 
-  const server = createMcpServer(service);
+  const server = createMcpServer(service, models);
   const transport = new StdioServerTransport();
 
   const shutdown = (signal: string): void => {
