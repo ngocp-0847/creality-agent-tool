@@ -1,5 +1,6 @@
 // Generic wheeled excavator assembly, dimensioned as a printable toy/model.
-// mode: 0=assembly, 1=carrier/body, 2=wheel, 3=boom assembly, 4=print layout
+// mode: 0=assembly, 1=carrier/body, 2=wheel, 3=boom assembly, 4=print layout,
+//       5=wheel/axle fit coupon
 mode = 0;
 
 vehicle_l = 165;
@@ -8,6 +9,7 @@ wheel_d = 38;
 wheel_w = 14;
 axle_d = 5;
 fit = 0.40;
+wheel_fit = 0.18; // radial clearance: 5.00 mm axle -> 5.36 mm wheel bore
 boom_pin_d = 8;
 
 $fn = 44;
@@ -24,13 +26,29 @@ module pin_between(a,b,d) {
 
 module tire() {
   difference() {
-    rotate([90,0,0]) cylinder(h=wheel_w,d=wheel_d,center=true);
-    rotate([90,0,0]) cylinder(h=wheel_w+2,d=axle_d+2*fit,center=true);
+    union() {
+      rotate([90,0,0]) cylinder(h=wheel_w,d=wheel_d,center=true);
+      // Raised hub is part of the wheel but remains hollow.
+      rotate([90,0,0]) cylinder(h=wheel_w+0.8,d=14,center=true);
+    }
+    // True through-bore for a removable friction fit on the printed axle.
+    rotate([90,0,0]) cylinder(h=wheel_w+3,d=axle_d+2*wheel_fit,center=true);
+    // Lead-in cones make the wheel easier to start without splitting the hub.
+    for (y=[-(wheel_w+1)/2,(wheel_w+1)/2])
+      translate([0,y,0]) rotate([90,0,0])
+        cylinder(h=1.2,d1=axle_d+1.4,d2=axle_d+2*wheel_fit,center=true);
     for (a=[0:30:330]) rotate([0,a,0])
       translate([wheel_d/2,0,0]) cube([5,wheel_w+3,6],center=true);
   }
-  color([0.35,0.35,0.35]) rotate([90,0,0])
-    cylinder(h=wheel_w+0.8,d=14,center=true);
+}
+
+module wheel_fit_coupon() {
+  // Print this small part first. It duplicates the real axle and wheel bore.
+  translate([-10,0,0]) rotate([90,0,0]) cylinder(h=18,d=axle_d,center=true);
+  translate([10,0,0]) difference() {
+    rotate([90,0,0]) cylinder(h=8,d=14,center=true);
+    rotate([90,0,0]) cylinder(h=10,d=axle_d+2*wheel_fit,center=true);
+  }
 }
 
 module undercarriage() {
@@ -133,4 +151,5 @@ else if (mode==4) {
   for (i=[0:3]) translate([25+i*38,103,wheel_d/2]) tire();
   translate([45,150,18]) rotate([0,18,0]) boom_group();
 }
+else if (mode==5) wheel_fit_coupon();
 else assembled();
