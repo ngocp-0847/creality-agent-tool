@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.build-test/
+coverage/
+.env
+*.log
+audit*.jsonl
+.mcp-empty.json
+
