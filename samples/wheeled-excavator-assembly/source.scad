@@ -1,6 +1,7 @@
 // Generic wheeled excavator assembly, dimensioned as a printable toy/model.
 // mode: 0=assembly, 1=carrier/body, 2=wheel, 3=boom assembly, 4=print layout,
-//       5=wheel/axle fit coupon
+//       5=wheel/axle fit coupon, 6=removable boom pin, 7=exploded assembly,
+//       8=boom joint detail
 mode = 0;
 
 vehicle_l = 165;
@@ -11,6 +12,7 @@ axle_d = 5;
 fit = 0.40;
 wheel_fit = 0.18; // radial clearance: 5.00 mm axle -> 5.36 mm wheel bore
 boom_pin_d = 8;
+boom_pin_clearance = 0.20;
 
 $fn = 44;
 
@@ -80,12 +82,12 @@ module upper_body() {
     // Exhaust and work light housings.
     translate([128,54,83]) cylinder(h=18,d=7);
     translate([55,13,88]) rounded_box([8,7,6],2);
-    // Boom mounting ears with removable horizontal pin hole.
-    for (y=[47,61])
+    // U-shaped boom clevis: 13 mm clear gap for the 12 mm boom root boss.
+    for (y=[44,64])
       difference() {
         translate([73,y,64]) rotate([90,0,0]) cylinder(h=7,d=25,center=true);
         translate([73,y,64]) rotate([90,0,0])
-          cylinder(h=9,d=boom_pin_d+2*fit,center=true);
+          cylinder(h=9,d=boom_pin_d+2*boom_pin_clearance,center=true);
       }
   }
 }
@@ -118,7 +120,7 @@ module boom_group() {
   // Root boss aligns with body mounting ears.
   difference() {
     rotate([90,0,0]) cylinder(h=12,d=24,center=true);
-    rotate([90,0,0]) cylinder(h=16,d=boom_pin_d+2*fit,center=true);
+    rotate([90,0,0]) cylinder(h=16,d=boom_pin_d+2*boom_pin_clearance,center=true);
   }
   // Main boom, dipper arm and reinforcing ribs.
   pin_between([4,0,6],[54,0,52],15);
@@ -130,6 +132,15 @@ module boom_group() {
   // Blunt oversized joint caps.
   for (p=[[54,0,52],[88,0,18]]) translate(p)
     rotate([90,0,0]) cylinder(h=18,d=18,center=true);
+}
+
+module boom_pin() {
+  // Print on its head. Shaft crosses both clevis ears and the boom boss.
+  // One rotate-extruded profile guarantees a single watertight solid.
+  rotate_extrude() polygon([
+    [0,0],[6.5,0],[6.5,2.4],[boom_pin_d/2,2.4],
+    [boom_pin_d/2,30],[3.3,32],[0,32]
+  ]);
 }
 
 module assembled() {
@@ -152,4 +163,25 @@ else if (mode==4) {
   translate([45,150,18]) rotate([0,18,0]) boom_group();
 }
 else if (mode==5) wheel_fit_coupon();
+else if (mode==6) boom_pin();
+else if (mode==7) {
+  color([0.90,0.59,0.05]) carrier_body();
+  // Boom translated outward along the pin axis to expose the clevis and holes.
+  color([0.96,0.68,0.10]) translate([73,92,64]) boom_group();
+  // Pin aligned with the joint but pulled out to the near side.
+  color([0.72,0.72,0.75]) translate([73,28,64]) rotate([-90,0,0]) boom_pin();
+}
+else if (mode==8) {
+  // Close-up exploded diagram of the real three-part joint.
+  color([0.90,0.59,0.05]) for (y=[-10,10]) difference() {
+    translate([0,y,0]) rotate([90,0,0]) cylinder(h=7,d=25,center=true);
+    translate([0,y,0]) rotate([90,0,0])
+      cylinder(h=9,d=boom_pin_d+2*boom_pin_clearance,center=true);
+  }
+  color([0.96,0.68,0.10]) translate([34,0,0]) difference() {
+    rotate([90,0,0]) cylinder(h=12,d=24,center=true);
+    rotate([90,0,0]) cylinder(h=16,d=boom_pin_d+2*boom_pin_clearance,center=true);
+  }
+  color([0.72,0.72,0.75]) translate([0,-43,0]) rotate([-90,0,0]) boom_pin();
+}
 else assembled();
