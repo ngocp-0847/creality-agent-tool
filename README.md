@@ -163,6 +163,9 @@ npm run build
 
 The test suite uses mocked Moonraker HTTP responses and does not contact a real printer.
 
+Generated OpenSCAD sources, previews, and STL exports are available in
+[`samples/`](./samples/README.md).
+
 ## Scope
 
 This MVP intentionally excludes arbitrary G-code, temperature controls, axis movement, firmware updates, cloud control, slicing, and printer discovery. Those capabilities require separate threat models and hardware testing.
