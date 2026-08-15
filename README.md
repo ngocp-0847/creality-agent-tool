@@ -1,6 +1,6 @@
 # Creality Agent Tool
 
-Local-first, agent-native control for Creality K1/K1C/K1 Max/K2-class 3D printers through a Klipper/Moonraker-compatible API.
+Local-first, agent-native control for Creality Hi Combo and K1/K1C/K1 Max/K2-class 3D printers through a Klipper/Moonraker-compatible API.
 
 The project exposes a clean TypeScript service API and a thin MCP stdio server. Read operations are direct; every physical mutation uses a short-lived, single-use confirmation token bound to the exact action and parameters.
 
@@ -8,7 +8,7 @@ The project exposes a clean TypeScript service API and a thin MCP stdio server. 
 
 ## Highlights
 
-- Creality profiles for `k1`, `k1c`, `k1-max`, and `k2`
+- Creality profiles for `hi-combo`, `k1`, `k1c`, `k1-max`, and `k2`
 - Printer status, current job, capabilities, files, and metadata
 - Static G-code preflight before upload
 - Temperature and build-volume enforcement
@@ -41,7 +41,26 @@ The core does not depend on MCP. A future OpenClaw-native wrapper can import `Cr
 - A Creality printer exposing a Moonraker-compatible local endpoint
 - The printer and agent host on a trusted LAN
 
-Creality firmware varies by model and release. Some stock builds may expose a Creality-modified subset of Moonraker or require root/community firmware. Start with read-only calls and `CREALITY_DRY_RUN=true`.
+Creality firmware varies by model and release. The official Hi Combo specifications confirm a 260×260×300 mm build volume, 300 °C nozzle, and 100 °C bed, but do not document a public Moonraker API. Stock Hi firmware may not expose port 7125; in that case this tool cannot connect without an explicitly enabled local Moonraker-compatible service. Start with read-only calls and `CREALITY_DRY_RUN=true`.
+
+### Creality Hi Combo compatibility
+
+| Capability | Status |
+|---|---|
+| Hi geometry and thermal safety profile | Supported |
+| Status/files/job via reachable Moonraker | Supported, conditional on firmware/network exposure |
+| Single-color G-code preflight/upload/print | Supported, conditional on Moonraker |
+| CFS state, RFID, slot mapping, filament switching | Not yet supported |
+| Multicolor 3MF upload/start | Not yet supported |
+| Creality Cloud control | Intentionally unsupported |
+
+For Combo workflows, prepare single-color G-code using the **Creality Hi** machine profile. Do not treat this MVP as a CFS controller: multicolor jobs normally carry CFS/material mapping that plain G-code upload may not preserve.
+
+Reference material:
+
+- [Creality Hi Combo product specifications](https://www.creality.com/products/creality-hi-combo)
+- [Creality Hi Combo support and firmware](https://www.creality.com/support/creality-hi-combo)
+- [Creality Hi official Klipper source](https://github.com/CrealityOfficial/Hi_Klipper)
 
 ## Install and verify
 
@@ -58,7 +77,7 @@ PowerShell environment example:
 
 ```powershell
 $env:CREALITY_PRINTER_URL = "http://192.168.1.42:7125"
-$env:CREALITY_PRINTER_MODEL = "k1"
+$env:CREALITY_PRINTER_MODEL = "hi-combo"
 $env:CREALITY_DRY_RUN = "true"
 npm run build
 npm run mcp
@@ -76,7 +95,7 @@ After `npm run build`:
       "args": ["/absolute/path/to/creality-agent-tool/dist/mcp/bin.js"],
       "env": {
         "CREALITY_PRINTER_URL": "http://192.168.1.42:7125",
-        "CREALITY_PRINTER_MODEL": "k1",
+        "CREALITY_PRINTER_MODEL": "hi-combo",
         "CREALITY_DRY_RUN": "true"
       }
     }

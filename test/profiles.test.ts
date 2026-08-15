@@ -26,6 +26,8 @@ describe('normalizeModel', () => {
     assert.equal(normalizeModel('K1MAX'), 'k1-max');
     assert.equal(normalizeModel('K2 Plus'), 'k2');
     assert.equal(normalizeModel('k2plus'), 'k2');
+    assert.equal(normalizeModel('Creality Hi Combo'), 'hi-combo');
+    assert.equal(normalizeModel('Hi'), 'hi-combo');
   });
 
   it('rejects an unknown model with a listing of what is supported', () => {
@@ -34,7 +36,7 @@ describe('normalizeModel', () => {
       (error: unknown) => {
         assert.ok(CrealityError.is(error));
         assert.equal(error.code, 'CONFIG_INVALID');
-        assert.match(error.message, /Supported: k1, k1c, k1-max, k2/);
+        assert.match(error.message, /Supported: k1, k1c, k1-max, k2, hi-combo/);
         return true;
       },
     );
@@ -43,7 +45,7 @@ describe('normalizeModel', () => {
 
 describe('printer profiles', () => {
   it('describes every supported model', () => {
-    assert.deepEqual([...SUPPORTED_MODELS].sort(), ['k1', 'k1-max', 'k1c', 'k2']);
+    assert.deepEqual([...SUPPORTED_MODELS].sort(), ['hi-combo', 'k1', 'k1-max', 'k1c', 'k2']);
   });
 
   it('keeps each profile internally consistent', () => {
@@ -64,6 +66,7 @@ describe('printer profiles', () => {
         assert.ok((profile.maxChamberTempC ?? 0) > 0);
       }
       assert.deepEqual([...profile.supportedActions], [...MUTATING_ACTIONS]);
+      assert.ok(Array.isArray(profile.compatibilityNotes));
     }
   });
 
@@ -73,6 +76,17 @@ describe('printer profiles', () => {
     assert.equal(PRINTER_PROFILES.k1.heatedChamber, false);
     assert.equal(PRINTER_PROFILES.k1c.heatedChamber, false);
     assert.equal(PRINTER_PROFILES['k1-max'].heatedChamber, false);
+    assert.equal(PRINTER_PROFILES['hi-combo'].heatedChamber, false);
+  });
+
+  it('uses the official Creality Hi Combo safety envelope', () => {
+    const profile = PRINTER_PROFILES['hi-combo'];
+    assert.deepEqual(profile.buildVolumeMm, { x: 260, y: 260, z: 300 });
+    assert.equal(profile.maxExtruderTempC, 300);
+    assert.equal(profile.maxBedTempC, 100);
+    assert.equal(profile.maxChamberTempC, undefined);
+    assert.match(profile.compatibilityNotes.join(' '), /CFS multicolor/i);
+    assert.match(profile.compatibilityNotes.join(' '), /Moonraker/i);
   });
 
   it('gives the K1 Max a larger build volume than the K1', () => {

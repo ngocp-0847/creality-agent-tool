@@ -2,7 +2,7 @@
   "name": "creality-agent-tool",
   "version": "0.1.0",
   "private": true,
-  "description": "Agent-native control tool for Creality K1/K1C/K1 Max/K2-class 3D printers over Klipper/Moonraker",
+  "description": "Agent-native local control for Creality Hi Combo and K1/K2 printers over Klipper/Moonraker",
   "license": "MIT",
   "type": "module",
   "engines": {

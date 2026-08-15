@@ -1,6 +1,6 @@
 /** Domain types returned by the service core. Deliberately decoupled from Moonraker's wire shapes. */
 
-export type PrinterModel = 'k1' | 'k1c' | 'k1-max' | 'k2';
+export type PrinterModel = 'k1' | 'k1c' | 'k1-max' | 'k2' | 'hi-combo';
 
 export type PrinterState =
   | 'ready'
@@ -84,6 +84,8 @@ export interface Capabilities {
   readonly moonrakerComponents?: readonly string[];
   readonly dryRunDefault: boolean;
   readonly confirmationTtlMs: number;
+  /** Model-specific integration constraints that an agent must surface. */
+  readonly compatibilityNotes: readonly string[];
 }
 
 export const MUTATING_ACTIONS = [

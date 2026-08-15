@@ -159,7 +159,7 @@ export function loadConfigFromEnv(
   if (model === undefined || model.trim() === '') {
     throw new CrealityError(
       'CONFIG_INVALID',
-      `${ENV_KEYS.model} is required (k1 | k1c | k1-max | k2).`,
+      `${ENV_KEYS.model} is required (k1 | k1c | k1-max | k2 | hi-combo).`,
       { details: { envKey: ENV_KEYS.model } },
     );
   }

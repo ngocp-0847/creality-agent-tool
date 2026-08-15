@@ -196,6 +196,7 @@ export class CrealityService {
       deniedActions: DENIED_ACTIONS,
       dryRunDefault: this.#config.dryRunDefault,
       confirmationTtlMs: this.#config.confirmationTtlMs,
+      compatibilityNotes: profile.compatibilityNotes,
     };
   }
 

@@ -14,6 +14,7 @@ import { GOOD_GCODE } from './helpers.js';
 
 const K1 = getProfile('k1');
 const K2 = getProfile('k2');
+const HI_COMBO = getProfile('hi-combo');
 
 function run(
   source: string | Uint8Array,
@@ -192,6 +193,17 @@ describe('preflight — build volume', () => {
     const source = 'G28\nG90\nG1 X280 Y280 E1\n';
     assert.equal(run(source).ok, false, 'K1 rejects 280mm');
     assert.equal(run(source, { profile: getProfile('k1-max') }).ok, true, 'K1 Max allows 280mm');
+  });
+
+  it('enforces the Creality Hi Combo 260x260x300 mm volume', () => {
+    assert.equal(run('G28\nG90\nG1 X260 Y260 Z300 E1', { profile: HI_COMBO }).ok, true);
+    assert.equal(run('G28\nG90\nG1 X262 Y260 Z300 E1', { profile: HI_COMBO }).ok, false);
+  });
+
+  it('enforces the Creality Hi Combo 300C nozzle and 100C bed limits', () => {
+    assert.equal(run('G28\nM104 S300\nM140 S100\nG1 X1 Y1 E1', { profile: HI_COMBO }).ok, true);
+    assert.equal(run('G28\nM104 S301\nG1 X1 Y1 E1', { profile: HI_COMBO }).ok, false);
+    assert.equal(run('G28\nM140 S101\nG1 X1 Y1 E1', { profile: HI_COMBO }).ok, false);
   });
 });
 

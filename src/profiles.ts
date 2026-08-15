@@ -21,6 +21,7 @@ export interface PrinterProfile {
   /** Upper bound on an uploadable G-code file for this class of machine. */
   readonly maxGcodeBytes: number;
   readonly supportedActions: readonly MutatingAction[];
+  readonly compatibilityNotes: readonly string[];
 }
 
 const ALL_ACTIONS: readonly MutatingAction[] = [
@@ -43,6 +44,7 @@ export const PRINTER_PROFILES: Readonly<Record<PrinterModel, PrinterProfile>> = 
     heatedChamber: false,
     maxGcodeBytes: 256 * MB,
     supportedActions: ALL_ACTIONS,
+    compatibilityNotes: [],
   },
   k1c: {
     model: 'k1c',
@@ -53,6 +55,7 @@ export const PRINTER_PROFILES: Readonly<Record<PrinterModel, PrinterProfile>> = 
     heatedChamber: false,
     maxGcodeBytes: 256 * MB,
     supportedActions: ALL_ACTIONS,
+    compatibilityNotes: [],
   },
   'k1-max': {
     model: 'k1-max',
@@ -63,6 +66,7 @@ export const PRINTER_PROFILES: Readonly<Record<PrinterModel, PrinterProfile>> = 
     heatedChamber: false,
     maxGcodeBytes: 512 * MB,
     supportedActions: ALL_ACTIONS,
+    compatibilityNotes: [],
   },
   k2: {
     model: 'k2',
@@ -74,6 +78,22 @@ export const PRINTER_PROFILES: Readonly<Record<PrinterModel, PrinterProfile>> = 
     heatedChamber: true,
     maxGcodeBytes: 512 * MB,
     supportedActions: ALL_ACTIONS,
+    compatibilityNotes: [],
+  },
+  'hi-combo': {
+    model: 'hi-combo',
+    displayName: 'Creality Hi Combo',
+    buildVolumeMm: { x: 260, y: 260, z: 300 },
+    maxExtruderTempC: 300,
+    maxBedTempC: 100,
+    heatedChamber: false,
+    maxGcodeBytes: 256 * MB,
+    supportedActions: ALL_ACTIONS,
+    compatibilityNotes: [
+      'Requires a Moonraker-compatible local endpoint; stock firmware may not expose one.',
+      'CFS multicolor/material mapping and direct 3MF printing are not supported by this MVP.',
+      'Use single-color G-code generated for the Creality Hi profile and validate with dry-run first.',
+    ],
   },
 };
 
@@ -91,6 +111,11 @@ export function normalizeModel(raw: string): PrinterModel {
     k2: 'k2',
     'k2-plus': 'k2',
     k2plus: 'k2',
+    hi: 'hi-combo',
+    'creality-hi': 'hi-combo',
+    'hi-combo': 'hi-combo',
+    hicombo: 'hi-combo',
+    'creality-hi-combo': 'hi-combo',
   };
   const model = aliases[key];
   if (model === undefined) {
